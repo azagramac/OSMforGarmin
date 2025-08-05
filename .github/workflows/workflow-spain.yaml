@@ -1,0 +1,337 @@
+name: "Build OpenStreetMaps for Garmin eTrex 🛰️"
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - 'README.md'
+  workflow_dispatch:
+  schedule:
+    - cron: '30 18 * * 5'
+
+env:
+  MKGMAP_VERSION: r4923
+  SPLITTER_VERSION: r654
+
+permissions:
+  contents: write
+
+jobs:
+  build-map:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: 🧾 Checkout repository
+        uses: actions/checkout@v3
+
+      - name: 🕓 Set timezone to Europe/Madrid
+        run: |
+          sudo ln -sf /usr/share/zoneinfo/Europe/Madrid /etc/localtime
+          echo "Europe/Madrid" | sudo tee /etc/timezone
+          date
+
+      - name: ☕ Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 📦 Install required packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osmium-tool nsis osmctools jq
+
+      - name: 📁 Create required directories
+        run: mkdir -p data tools/mkgmap output output/peninsula output/canarias output/baleares bounds sea
+
+      - name: 🌐 Get remote file date of Spain, Mainland 🇪🇸 PBF file
+        id: remote-date-peninsula
+        run: |
+          URL="https://download.geofabrik.de/europe/spain-latest.osm.pbf"
+          REMOTE_DATE=$(curl -sI "$URL" | grep -i '^last-modified:' | cut -d' ' -f2-)
+          echo "REMOTE_DATE=$REMOTE_DATE" >> $GITHUB_OUTPUT
+
+      - name: 🌐 Get remote file date of Spain, Canary Islands 🇮🇨 PBF file
+        id: remote-date-canarias
+        run: |
+          URL="https://download.geofabrik.de/africa/canary-islands-latest.osm.pbf"
+          REMOTE_DATE=$(curl -sI "$URL" | grep -i '^last-modified:' | cut -d' ' -f2-)
+          echo "REMOTE_DATE=$REMOTE_DATE" >> $GITHUB_OUTPUT
+
+      - name: 🌐 Get remote file date of Spain, Balearic Islands 🏝️ PBF file
+        id: remote-date-baleares
+        run: |
+          URL="https://download.geofabrik.de/europe/spain/islas-baleares-latest.osm.pbf"
+          REMOTE_DATE=$(curl -sI "$URL" | grep -i '^last-modified:' | cut -d' ' -f2-)
+          echo "REMOTE_DATE=$REMOTE_DATE" >> $GITHUB_OUTPUT
+
+      - name: 🕒 Compare with local file date - Spain, Mainland 🇪🇸
+        id: compare-dates-peninsula
+        run: |
+          FILE="data/spain-latest.osm.pbf"
+          REMOTE_EPOCH=$(date -d "${{ steps.remote-date-peninsula.outputs.REMOTE_DATE }}" +%s)
+          LOCAL_EPOCH=0
+          if [ -f "$FILE" ]; then
+            LOCAL_EPOCH=$(date -r "$FILE" +%s)
+          fi
+
+          if [ "$REMOTE_EPOCH" -gt "$LOCAL_EPOCH" ]; then
+            echo "💾 Update available for Peninsula: downloading latest PBF file..."
+            curl -L -o "$FILE" https://download.geofabrik.de/europe/spain-latest.osm.pbf
+            echo "downloaded=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ No update needed for Peninsula, PBF file is already the latest version."
+            echo "downloaded=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: 🕒 Compare with local file date - Spain, Canary Islands 🇮🇨
+        id: compare-dates-canarias
+        run: |
+          FILE="data/canary-islands-latest.osm.pbf"
+          REMOTE_EPOCH=$(date -d "${{ steps.remote-date-canarias.outputs.REMOTE_DATE }}" +%s)
+          LOCAL_EPOCH=0
+          if [ -f "$FILE" ]; then
+            LOCAL_EPOCH=$(date -r "$FILE" +%s)
+          fi
+
+          if [ "$REMOTE_EPOCH" -gt "$LOCAL_EPOCH" ]; then
+            echo "💾 Update available for Canarias: downloading latest PBF file..."
+            curl -L -o "$FILE" https://download.geofabrik.de/africa/canary-islands-latest.osm.pbf
+            echo "downloaded=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ No update needed for Canarias, PBF file is already the latest version."
+            echo "downloaded=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🕒 Compare with local file date - Spain, Balearic Islands 🏝️
+        id: compare-dates-baleares
+        run: |
+          FILE="data/islas-baleares-latest.osm.pbf"
+          REMOTE_EPOCH=$(date -d "${{ steps.remote-date-baleares.outputs.REMOTE_DATE }}" +%s)
+          LOCAL_EPOCH=0
+          if [ -f "$FILE" ]; then
+            LOCAL_EPOCH=$(date -r "$FILE" +%s)
+          fi
+
+          if [ "$REMOTE_EPOCH" -gt "$LOCAL_EPOCH" ]; then
+            echo "💾 Update available for Baleares: downloading latest PBF file..."
+            curl -L -o "$FILE" https://download.geofabrik.de/europe/spain/islas-baleares-latest.osm.pbf
+            echo "downloaded=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ No update needed for Baleares, PBF file is already the latest version."
+            echo "downloaded=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📅 Fetch Geofabrik Europe page and parse Spain date
+        id: release-getdate-osm
+        run: |
+          HTML=$(curl -s https://download.geofabrik.de/europe/spain.html)
+          DATE_OSM=$(echo "$HTML" | grep -Po 'up to [0-9T:-]+Z' | head -n1 | cut -d' ' -f3)
+          echo "DATE_OSM=$DATE_OSM" >> $GITHUB_OUTPUT
+
+      - name: 📅 Extract file date for version tag - Spain, Mainland 🇪🇸
+        id: getdate-peninsula
+        run: |
+          DATE=$(date -r data/spain-latest.osm.pbf +'%Y-%m-%d' || date +'%Y-%m-%d')
+          echo "DATE=$DATE" >> $GITHUB_OUTPUT
+
+      - name: 📅 Extract file date for version tag - Spain, Canary Islands 🇮🇨
+        id: getdate-canarias
+        run: |
+          DATE=$(date -r data/canary-islands-latest.osm.pbf +'%Y-%m-%d' || date +'%Y-%m-%d')
+          echo "DATE=$DATE" >> $GITHUB_OUTPUT
+
+      - name: 📅 Extract file date for version tag - Spain, Balearic Islands 🏝️
+        id: getdate-baleares
+        run: |
+          DATE=$(date -r data/islas-baleares-latest.osm.pbf +'%Y-%m-%d' || date +'%Y-%m-%d')
+          echo "DATE=$DATE" >> $GITHUB_OUTPUT
+
+      - name: 🛠️ Download and extract mkgmap ${{ env.MKGMAP_VERSION }}
+        run: |
+          curl -L https://www.mkgmap.org.uk/download/mkgmap-${{ env.MKGMAP_VERSION }}.tar.gz \
+            | tar xz -C tools/mkgmap --strip-components=1
+
+      - name: 🛠️ Download and extract splitter ${{ env.SPLITTER_VERSION }}
+        run: |
+          mkdir -p tools/splitter
+          curl -L https://www.mkgmap.org.uk/download/splitter-${{ env.SPLITTER_VERSION }}.tar.gz \
+            | tar xz -C tools/splitter --strip-components=1
+
+      - name: 📦 Download and extract bounds and sea data
+        run: |
+          curl -L -o bounds.zip https://www.thkukuk.de/osm/data/bounds-latest.zip
+          curl -L -o sea.zip https://www.thkukuk.de/osm/data/sea-latest.zip
+          unzip -q bounds.zip -d bounds/
+          unzip -q sea.zip -d sea/
+
+      - name: 🔀 Split PBF into tiles - Spain, Mainland 🇪🇸
+        run: |
+          mkdir -p split/peninsula
+          java -Xmx6G -jar tools/splitter/splitter.jar \
+            --max-nodes=800000 \
+            --output-dir=split/peninsula \
+            --keep-complete=true \
+            data/spain-latest.osm.pbf
+
+      - name: 🔀 Split PBF into tiles - Spain, Canary Islands 🇮🇨
+        run: |
+          mkdir -p split/canarias
+          java -Xmx6G -jar tools/splitter/splitter.jar \
+            --max-nodes=800000 \
+            --output-dir=split/canarias \
+            --keep-complete=true \
+            data/canary-islands-latest.osm.pbf
+
+      - name: 🔀 Split PBF into tiles - Spain, Balearic Islands 🏝️
+        run: |
+          mkdir -p split/baleares
+          java -Xmx6G -jar tools/splitter/splitter.jar \
+            --max-nodes=800000 \
+            --output-dir=split/baleares \
+            --keep-complete=true \
+            data/islas-baleares-latest.osm.pbf
+          
+      - name: 🧭 Build OSM map - Spain, Mainland 🇪🇸
+        run: |
+          java -Xmx8G -XX:+UseG1GC -jar tools/mkgmap/mkgmap.jar \
+            --gmapsupp \
+            --route \
+            --index \
+            --family-id=1001 \
+            --product-id=1 \
+            --family-name="OSM España" \
+            --series-name="OpenStreetMap - España" \
+            --mapname=63240001 \
+            --overview-mapname=ESP_OVR \
+            --description="Mapa España, build ${{ steps.getdate-peninsula.outputs.DATE }}" \
+            --country-name=España \
+            --country-abbr=ES \
+            --region-name=España \
+            --output-dir=output/peninsula \
+            --draw-priority=25 \
+            --add-pois-to-areas \
+            --link-pois-to-ways \
+            --preserve-element-order \
+            --bounds=bounds/ \
+            --precomp-sea=sea/ \
+            --generate-sea=polygons \
+            --verbose \
+            split/peninsula/*.osm.pbf
+
+      - name: ♻️ Rename gmapsupp.img to peninsula-gmapsupp.img
+        run: |
+          mv output/peninsula/gmapsupp.img output/peninsula/peninsula-gmapsupp.img
+
+      - name: 🧭 Build OSM map - Spain, Canary Islands 🇮🇨
+        run: |
+          java -Xmx8G -XX:+UseG1GC -jar tools/mkgmap/mkgmap.jar \
+            --gmapsupp \
+            --route \
+            --index \
+            --family-id=1002 \
+            --product-id=1 \
+            --family-name="OSM Canarias" \
+            --series-name="OpenStreetMap - Canarias" \
+            --mapname=63240002 \
+            --overview-mapname=ESP_OVR_CAN \
+            --description="Mapa Canarias, build ${{ steps.getdate-canarias.outputs.DATE }}" \
+            --country-name=España \
+            --country-abbr=ES \
+            --region-name=Canarias \
+            --output-dir=output/canarias \
+            --draw-priority=25 \
+            --add-pois-to-areas \
+            --link-pois-to-ways \
+            --preserve-element-order \
+            --bounds=bounds/ \
+            --precomp-sea=sea/ \
+            --generate-sea=polygons \
+            --verbose \
+            split/canarias/*.osm.pbf
+
+      - name: ♻️ Rename gmapsupp.img to canarias-gmapsupp.img
+        run: |
+          mv output/canarias/gmapsupp.img output/canarias/canarias-gmapsupp.img
+
+      - name: 🧭 Build OSM map - Spain, Balearic Islands 🏝️
+        run: |
+          java -Xmx8G -XX:+UseG1GC -jar tools/mkgmap/mkgmap.jar \
+            --gmapsupp \
+            --route \
+            --index \
+            --family-id=1003 \
+            --product-id=1 \
+            --family-name="OSM Baleares" \
+            --series-name="OpenStreetMap - Baleares" \
+            --mapname=63240003 \
+            --overview-mapname=ESP_OVR_BAL \
+            --description="Mapa Baleares, build ${{ steps.getdate-baleares.outputs.DATE }}" \
+            --country-name=España \
+            --country-abbr=ES \
+            --region-name=Baleares \
+            --output-dir=output/baleares \
+            --draw-priority=25 \
+            --add-pois-to-areas \
+            --link-pois-to-ways \
+            --preserve-element-order \
+            --bounds=bounds/ \
+            --precomp-sea=sea/ \
+            --generate-sea=polygons \
+            --verbose \
+            split/baleares/*.osm.pbf
+
+      - name: ♻️ Rename gmapsupp.img to baleares-gmapsupp.img
+        run: |
+          mv output/baleares/gmapsupp.img output/baleares/baleares-gmapsupp.img
+
+      - name: 🚀 Publish combined release on GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.getdate-peninsula.outputs.DATE }}"
+          name: "OpenStreetMaps (España peninsula, Islas Canarias / Islas Baleares) - Build ${{ steps.getdate-peninsula.outputs.DATE }}"
+          body: |
+            🧭 Mapa compilado para Garmin eTrex 22x/30x/32x
+            📅 Fecha del build: ${{ steps.getdate-peninsula.outputs.DATE }}
+            🗺️ Datos de OpenStreetMap: ${{ steps.release-getdate-osm.outputs.DATE_OSM }}
+
+            ---
+
+            ### 🏷️ Opciones de compilación
+
+            | 🌍 Región    | 🆔 family-id | 🏷️ family-name | 📦 series-name               | 🗺️ mapname | 🧾 overview-mapname | 🇪🇸 country-name | 🌐 country-abbr | 🗺️ region-name | 📅 Build Date |
+            |--------------|--------------|----------------|------------------------------|------------|----------------------|------------------|------------------|----------------|----------------|
+            | Peninsula    | 1001         | OSM España     | OpenStreetMap - España       | 63240001   | ESP_OVR             | España           | ES               | España         | ${{ steps.getdate-peninsula.outputs.DATE }} |
+            | Canarias     | 1002         | OSM Canarias   | OpenStreetMap - Canarias     | 63240002   | ESP_OVR_CAN         | España           | ES               | Canarias       | ${{ steps.getdate-canarias.outputs.DATE }} |            
+            | Baleares     | 1003         | OSM Baleares   | OpenStreetMap - Baleares     | 63240003   | ESP_OVR_BAL         | España           | ES               | Baleares       | ${{ steps.getdate-baleares.outputs.DATE }} |
+
+            ---
+
+            ⚙️ Parámetros en la compilación:
+
+            - 🗺️ Generar archivo `*-gmapsupp.img` (`--gmapsupp`)
+            - 🧭 Ruteable (`--route`)
+            - 🔍 Índice de búsqueda (`--index`)
+            - 🧾 `product-id: 1`
+            - 📊 `draw-priority: 25`
+            - 🏘️ Añadir POIs a áreas (`--add-pois-to-areas`)
+            - 🔗 Vincular POIs a vías (`--link-pois-to-ways`)
+            - 🔄 Preservar orden de elementos (`--preserve-element-order`)
+            - 🗂️ Carpeta `bounds/`
+            - 🌊 Carpeta `sea/`
+            - 🌐 Generar mar como polígonos (`--generate-sea=polygons`)
+            - 📢 Modo detallado (`--verbose`)
+
+          files: |
+            output/peninsula/peninsula-gmapsupp.img
+            output/canarias/canarias-gmapsupp.img
+            output/baleares/baleares-gmapsupp.img
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🧹 Clean up temporary files and folders
+        if: always()
+        run: |
+          echo "Cleaning up temporary directories..."
+          rm -rf data tools output split bounds sea *.zip
+          echo "Cleanup completed."
