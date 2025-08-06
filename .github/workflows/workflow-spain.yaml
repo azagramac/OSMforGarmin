@@ -292,8 +292,8 @@ jobs:
           name: "OpenStreetMaps (España peninsula, Islas Canarias / Islas Baleares) - Build ${{ steps.getdate-peninsula.outputs.DATE }}"
           body: |
             🧭 Mapa compilado para Garmin eTrex 22x/30x/32x
-            📅 Fecha del build: ${{ steps.getdate-peninsula.outputs.DATE }}
-            🗺️ Datos de OpenStreetMap: ${{ steps.release-getdate-osm.outputs.DATE_OSM }}
+            📅 Fecha del build: `${{ steps.getdate-peninsula.outputs.DATE }}`
+            🗺️ Datos de OpenStreetMap: `${{ steps.release-getdate-osm.outputs.DATE_OSM }}`
 
             ---
 
@@ -309,7 +309,7 @@ jobs:
 
             ⚙️ Parámetros en la compilación:
 
-            - 🗺️ Generar archivo `*-gmapsupp.img` (`--gmapsupp`)
+            - 🗺️ Generar archivo `gmapsupp.img` (`--gmapsupp`)
             - 🧭 Ruteable (`--route`)
             - 🔍 Índice de búsqueda (`--index`)
             - 🧾 `product-id: 1`
@@ -328,6 +328,29 @@ jobs:
             output/baleares/baleares-gmapsupp.img
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📤 Send Telegram notification
+        if: always()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHATID: ${{ secrets.TELEGRAM_CHATID }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          BUILD_STATUS: ${{ job.status }}
+          OSM_DATE: ${{ steps.release-getdate-osm.outputs.DATE_OSM }}
+        run: |
+          STATUS_EMOJI="✅"
+          if [ "$BUILD_STATUS" != "success" ]; then
+            STATUS_EMOJI="❌"
+          fi
+
+          MESSAGE=$(printf "<b> 🛰️ OpenStreetMaps for Garmin eTrex, build: %s %s</b>\n\n \
+          📅 <b>Fecha OSM compilación:</b> \n\t\t\t\t\t\t\t %s\n \
+          🔗 <a href=\"https://github.com/azagramac/testingWorkflow/actions/runs/%s\">Ver detalles en GitHub</a>" "$STATUS_EMOJI" "${BUILD_STATUS^}" "$OSM_DATE" "$GITHUB_RUN_ID")
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHATID}" \
+            --data-urlencode "parse_mode=HTML" \
+            --data-urlencode "text=$MESSAGE" >/dev/null 2>&1
 
       - name: 🧹 Clean up temporary files and folders
         if: always()
