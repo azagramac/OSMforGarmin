@@ -204,7 +204,7 @@ jobs:
             --series-name="OpenStreetMap - España" \
             --mapname=63240001 \
             --overview-mapname=ESP_OVR \
-            --description="Mapa España, build ${{ steps.getdate-peninsula.outputs.DATE }}" \
+            --description="Mapa España, build ${{ steps.release-getdate-osm.outputs.DATE_OSM }}" \
             --country-name=España \
             --country-abbr=ES \
             --region-name=España \
@@ -235,7 +235,7 @@ jobs:
             --series-name="OpenStreetMap - Canarias" \
             --mapname=63240002 \
             --overview-mapname=ESP_OVR_CAN \
-            --description="Mapa Canarias, build ${{ steps.getdate-canarias.outputs.DATE }}" \
+            --description="Mapa Canarias, build ${{ steps.release-getdate-osm.outputs.DATE_OSM }}" \
             --country-name=España \
             --country-abbr=ES \
             --region-name=Canarias \
@@ -266,7 +266,7 @@ jobs:
             --series-name="OpenStreetMap - Baleares" \
             --mapname=63240003 \
             --overview-mapname=ESP_OVR_BAL \
-            --description="Mapa Baleares, build ${{ steps.getdate-baleares.outputs.DATE }}" \
+            --description="Mapa Baleares, build ${{ steps.release-getdate-osm.outputs.DATE_OSM }}" \
             --country-name=España \
             --country-abbr=ES \
             --region-name=Baleares \
