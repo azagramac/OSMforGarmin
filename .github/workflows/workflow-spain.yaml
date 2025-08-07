@@ -289,7 +289,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ steps.getdate-peninsula.outputs.DATE }}"
-          name: "🗺️ ${{ steps.getdate-peninsula.outputs.DATE }}"
+          name: "🗺️ ${{ steps.release-getdate-osm.outputs.DATE_OSM }}"
           body: |
             🧭 Mapa compilado para Garmin eTrex 22x/30x/32x 🛰️
             📅 Fecha del build: `${{ steps.getdate-peninsula.outputs.DATE }}`
