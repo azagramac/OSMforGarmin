@@ -7,7 +7,7 @@ on:
       - 'README.md'
   workflow_dispatch:
   schedule:
-    - cron: '30 18 * * 5'
+    - cron: '0 19 * * 5'
 
 env:
   MKGMAP_VERSION: r4923
