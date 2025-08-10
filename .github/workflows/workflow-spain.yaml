@@ -343,7 +343,7 @@ jobs:
             STATUS_EMOJI="❌"
           fi
 
-          MESSAGE=$(printf "<b> 🛰️ OpenStreetMaps for Garmin eTrex, build: %s %s</b>\n\n \
+          MESSAGE=$(printf "<b> 🛰️ OpenStreetMaps for Garmin eTrex %s %s</b>\n\n \
           📅 <b>Fecha OSM compilación:</b> \n\t\t\t\t\t\t\t %s\n \
           🔗 <a href=\"https://github.com/azagramac/OSMforGarmin/actions/runs/%s\">Ver detalles en GitHub</a>" "$STATUS_EMOJI" "${BUILD_STATUS^}" "$OSM_DATE" "$GITHUB_RUN_ID")
 
