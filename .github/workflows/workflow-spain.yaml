@@ -191,6 +191,30 @@ jobs:
             --output-dir=split/baleares \
             --keep-complete=true \
             data/islas-baleares-latest.osm.pbf
+
+      - name: 🔑 Calculate FID for Spain, Mainland 🇪🇸
+        id: fid-peninsula
+        run: |
+          hash=$(sha256sum data/spain-latest.osm.pbf | cut -c1-8)
+          fid=$((16#$hash % 65535))
+          if [ "$fid" -eq 0 ]; then fid=1; fi
+           echo "fid=$fid" >> $GITHUB_OUTPUT
+
+      - name: 🔑 Calculate FID for Spain, Canary Islands 🇮🇨
+        id: fid-canarias
+        run: |
+          hash=$(sha256sum data/canary-islands-latest.osm.pbf | cut -c1-8)
+          fid=$((16#$hash % 65535))
+          if [ "$fid" -eq 0 ]; then fid=1; fi
+           echo "fid=$fid" >> $GITHUB_OUTPUT
+
+      - name: 🔑 Calculate FID for Spain, Balearic Islands 🏝️
+        id: fid-baleares
+        run: |
+          hash=$(sha256sum data/islas-baleares-latest.osm.pbf | cut -c1-8)
+          fid=$((16#$hash % 65535))
+          if [ "$fid" -eq 0 ]; then fid=1; fi
+          echo "fid=$fid" >> $GITHUB_OUTPUT
           
       - name: 🧭 Build OSM map - Spain, Mainland 🇪🇸
         run: |
@@ -198,7 +222,7 @@ jobs:
             --gmapsupp \
             --route \
             --index \
-            --family-id=1001 \
+            --family-id=${{ steps.fid-peninsula.outputs.fid }} \
             --product-id=1 \
             --family-name="OSM España" \
             --series-name="OpenStreetMap - España" \
@@ -229,7 +253,7 @@ jobs:
             --gmapsupp \
             --route \
             --index \
-            --family-id=1002 \
+            --family-id=${{ steps.fid-canarias.outputs.fid }} \
             --product-id=1 \
             --family-name="OSM Canarias" \
             --series-name="OpenStreetMap - Canarias" \
@@ -260,7 +284,7 @@ jobs:
             --gmapsupp \
             --route \
             --index \
-            --family-id=1003 \
+            --family-id=${{ steps.fid-baleares.outputs.fid }} \
             --product-id=1 \
             --family-name="OSM Baleares" \
             --series-name="OpenStreetMap - Baleares" \
@@ -299,28 +323,13 @@ jobs:
 
             ### 🏷️ Opciones de compilación
 
-            | 🌍 Región    | 🆔 family-id | 🏷️ family-name | 📦 series-name               | 🗺️ mapname | 🧾 overview-mapname | 🇪🇸 country-name | 🌐 country-abbr | 🗺️ region-name | 📅 Build Date |
+            | 🌍 Región | 🆔 family-id | 🏷️ family-name | 📦 series-name | 🗺️ mapname | 🧾 overview-mapname | 🇪🇸 country-name | 🌐 country-abbr | 🗺️ region-name | 📅 Build Date |
             |--------------|--------------|----------------|------------------------------|------------|----------------------|------------------|------------------|----------------|----------------|
-            | Peninsula    | 1001         | OSM España     | OpenStreetMap - España       | 63240001   | ESP_OVR             | España           | ES               | España         | ${{ steps.getdate-peninsula.outputs.DATE }} |
-            | Canarias     | 1002         | OSM Canarias   | OpenStreetMap - Canarias     | 63240002   | ESP_OVR_CAN         | España           | ES               | Canarias       | ${{ steps.getdate-canarias.outputs.DATE }} |            
-            | Baleares     | 1003         | OSM Baleares   | OpenStreetMap - Baleares     | 63240003   | ESP_OVR_BAL         | España           | ES               | Baleares       | ${{ steps.getdate-baleares.outputs.DATE }} |
+            | Peninsula | ${{ steps.fid-peninsula.outputs.fid }} | OSM España | OpenStreetMap - España | 63240001 | ESP_OVR | España | ES | España | ${{ steps.getdate-peninsula.outputs.DATE }} |
+            | Canarias | ${{ steps.fid-canarias.outputs.fid }} | OSM Canarias | OpenStreetMap - Canarias | 63240002 | ESP_OVR_CAN | España | ES | Canarias | ${{ steps.getdate-canarias.outputs.DATE }} |            
+            | Baleares | ${{ steps.fid-baleares.outputs.fid }} | OSM Baleares | OpenStreetMap - Baleares | 63240003 | ESP_OVR_BAL | España | ES | Baleares | ${{ steps.getdate-baleares.outputs.DATE }} |
 
             ---
-
-            ⚙️ Parámetros en la compilación:
-
-            - 🗺️ Generar archivo `gmapsupp.img` (`--gmapsupp`)
-            - 🧭 Ruteable (`--route`)
-            - 🔍 Índice de búsqueda (`--index`)
-            - 🧾 `product-id: 1`
-            - 📊 `draw-priority: 25`
-            - 🏘️ Añadir POIs a áreas (`--add-pois-to-areas`)
-            - 🔗 Vincular POIs a vías (`--link-pois-to-ways`)
-            - 🔄 Preservar orden de elementos (`--preserve-element-order`)
-            - 🗂️ Carpeta `bounds/`
-            - 🌊 Carpeta `sea/`
-            - 🌐 Generar mar como polígonos (`--generate-sea=polygons`)
-            - 📢 Modo detallado (`--verbose`)
 
           files: |
             output/peninsula/peninsula-gmapsupp.img
