@@ -3,7 +3,11 @@
 # 🛰️ Garmin Map Builder – OpenStreetMap
 <a href="https://wiki.openstreetmap.org/wiki/Mkgmap" target="_blank" rel="noopener noreferrer"> <img width="92" height="92" alt="OpenStreetMap Logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Openstreetmap_logo.svg/100px-Openstreetmap_logo.svg.png" /> </a>
 
-Compilación de mapas .img compatibles con dispositivos Garmin eTrex 22x / 30x / 32x y similares, usando datos oficiales de OpenStreetMap.
+Compilación de mapas .img compatibles con dispositivos Garmin eTrex 22x / 30x / 32x / GPSMAP 66, 67... y similares, usando datos oficiales de OpenStreetMap.
+
+<img width="240" height="320" alt="imagen" src="https://github.com/user-attachments/assets/8e6c5f65-7af5-4761-9f2b-76638043a326" />
+<img width="240" height="320" alt="imagen" src="https://github.com/user-attachments/assets/11b08321-67a4-4b25-99c5-adb66d5c7622" />
+
 
 ---
 
@@ -38,8 +42,10 @@ Compilación de mapas .img compatibles con dispositivos Garmin eTrex 22x / 30x /
 > En tarjeta SD puedes tener varios mapas con diferentes nombres.
 
 ### ⚙️ Activación del mapa en el dispositivo Garmin
-
-- Navega a: Setup > Map > Select Map y activa el mapa nuevo.
+<img width="240" height="320" alt="imagen" src="https://github.com/user-attachments/assets/0e9a8318-0652-4c84-ad09-519cead889cb" />
+<img width="240" height="320" alt="imagen" src="https://github.com/user-attachments/assets/6fd81662-9777-4603-9a51-740d966a42c5" />
+<img width="240" height="320" alt="imagen" src="https://github.com/user-attachments/assets/3cff965a-d91c-4911-8cd9-39505259977a" />
+<img width="240" height="320" alt="imagen" src="https://github.com/user-attachments/assets/c599c9b7-cb08-4377-91f6-a8bb467472e3" />
 
 ---
 
@@ -49,11 +55,3 @@ Compilación de mapas .img compatibles con dispositivos Garmin eTrex 22x / 30x /
 - 📦 [mkgmap](https://www.mkgmap.org.uk/download/mkgmap.html) `r4923`
 - 🔀 [splitter](https://www.mkgmap.org.uk/download/splitter.html) `r654`
 - 🗺️ Datos OSM de [Geofabrik](https://download.geofabrik.de/)
-
----
-
-## 🌐 Mapas ya compilados en .img
-
-- [userbeam](https://www.userbeam.de/osm/maps/europe/spain/)
-- [alternativaslibres](https://alternativaslibres.org/es/downloads.php)
-- [wanderreitkarte](https://www.wanderreitkarte.de/garmin_de.php)
