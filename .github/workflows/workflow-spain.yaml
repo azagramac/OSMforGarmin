@@ -1,4 +1,4 @@
-name: "Build OpenStreetMaps for Garmin eTrex 🛰️"
+name: "Build OpenStreetMaps for Garmin 🛰️"
 
 on:
   push:
